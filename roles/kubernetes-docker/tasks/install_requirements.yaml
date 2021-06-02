@@ -1,0 +1,21 @@
+---
+- name: Add kubernetes repo
+  copy:
+    src: "kubernetes.repo"
+    dest: "/etc/yum.repos.d/kubernetes.repo"
+- name: Install packeges
+  yum:
+    name: 
+     - docker
+     - kubelet
+     - kubeadm
+     - kubernetes-cni
+     - bridge-utils
+- name: Start docker and kubelet
+  systemd:
+    name: "{{ item.name }}"
+    state: restarted
+    enabled: yes
+  loop:
+   - {name: "docker"}
+   - {name: "kubelet"}

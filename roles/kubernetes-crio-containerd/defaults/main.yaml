@@ -1,0 +1,8 @@
+### for corrent reset last configuration. If it's fist install, set empty value. Example ""
+last_container_runtime: ""
+# cri (containerd, crio)
+container_runtime: "containerd" 
+#for cri-o install ; See more on https://kubernetes.io/docs/setup/production-environment/container-runtimes/
+os_version: "CentOS_7"
+### to install 1.20.1 set 1.20:1.20.1
+crio_version: "1.20"

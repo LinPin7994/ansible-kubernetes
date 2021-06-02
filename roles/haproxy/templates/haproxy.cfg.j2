@@ -1,0 +1,45 @@
+{% if stats.enabled == 'yes' %}
+listen stats
+  bind    {{ stats.bind }}
+  mode    http
+  stats   enable
+  stats   hide-version
+  stats   uri       /{{ stats.uri }}
+  stats   refresh   30s
+  stats   realm     Haproxy\ Statistics
+  stats   auth      {{ stats.auth_user }}:{{ stats.auth_password }}
+{% endif %}
+global
+    log /dev/log  local0 warning
+    chroot      {{ global.chroot }}
+    pidfile     {{ global.pidfile | default('/var/run/haproxy.pid') }}
+    maxconn     {{ global.maxconn }}
+    user        {{ global.user }}
+    group       {{ global.group }}
+    daemon
+   
+   stats socket /var/lib/haproxy/stats
+   
+defaults
+  log {{ defaults.log | default('global') }}
+  option  httplog
+  option  dontlognull
+        timeout connect 5000
+        timeout client 50000
+        timeout server 50000
+   
+frontend {{ frontend.name }}
+  bind {{ frontend.bind }}
+  mode {{ frontend.mode }}
+  option tcplog
+  default_backend {{ frontend.name }}
+   
+backend {{ frontend.name }}
+    mode {{ backend.mode | default('tcp') }}
+    option tcplog
+    option tcp-check
+    balance {{ backend.balance }}
+    default-server inter 10s downinter 5s rise 2 fall 2 slowstart 60s maxconn 250 maxqueue 256 weight 100
+{% for address in  backend.default_servers %}
+    server {{ address }} check
+{% endfor %}

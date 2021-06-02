@@ -1,0 +1,15 @@
+---
+- name: Disable SELinux
+  selinux:
+    state: disabled
+- name: Disable swap
+  shell: swapoff -a
+- name: Disable swap in fstab
+  #mount:
+   # name: swap
+    #fstype: swap
+    #state: absent
+  lineinfile:
+    path: /etc/fstab
+    regexp: '^/swapfile'
+    line: '# /swapfile'

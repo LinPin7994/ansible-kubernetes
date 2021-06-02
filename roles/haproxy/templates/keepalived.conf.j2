@@ -1,0 +1,42 @@
+global_defs {
+  notification_email {
+  }
+  router_id LVS_DEVEL
+  vrrp_skip_check_adv_addr
+  vrrp_garp_interval 0
+  vrrp_gna_interval 0
+}
+   
+vrrp_script chk_haproxy {
+  script "killall -0 haproxy"
+  interval 2
+  weight 2
+}
+   
+vrrp_instance haproxy-vip {
+  state BACKUP
+  priority 100
+  interface eth1                     
+  virtual_router_id 60
+  advert_int 1
+  authentication {
+    auth_type PASS
+    auth_pass {{ keepalived.password }}
+  }
+  unicast_src_ip {{ ansible_eth1.ipv4.address }}
+  unicast_peer {
+  {% for address in keepalived.unicast_peer %}
+    {% if address != ansible_eth1.ipv4.address %}
+  {{ address }}
+    {% endif %}
+  {% endfor %}                     
+  }
+   
+  virtual_ipaddress {
+    {{ keepalived.vip_ip }}                 
+  }
+   
+  track_script {
+    chk_haproxy
+  }
+}

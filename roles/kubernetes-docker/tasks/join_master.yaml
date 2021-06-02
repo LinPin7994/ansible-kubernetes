@@ -1,0 +1,22 @@
+---
+- name: Register number of cpu
+  shell: cat /proc/cpuinfo |grep CPU|wc -l
+  register: numCPU
+- name: Reset latest configuration on join masters
+  shell: kubeadm reset --force
+  tags: reset_master
+- name: Join master nodes with 1 cpu
+  shell: |
+    kubeadm join "{{ control_plane_endpoint }}" --token "{{ hostvars['k8s_join']['token'] }}" \
+    --discovery-token-ca-cert-hash sha256:"{{ hostvars['k8s_join']['hash'] }}" \
+    --control-plane --certificate-key "{{ hostvars['k8s_join']['certificate'] }}" \
+    --ignore-preflight-errors=NumCPU \
+    --apiserver-advertise-address="{{ ansible_eth1.ipv4.address }}"
+  when: numCPU.stdout == '1'
+- name: Join master node
+  shell: |
+    kubeadm join "{{ control_plane_endpoint }}" --token "{{ hostvars['k8s_join']['token'] }}" \
+    --discovery-token-ca-cert-hash sha256:"{{ hostvars['k8s_join']['hash'] }}" \
+    --control-plane --certificate-key "{{ hostvars['k8s_join']['certificate'] }}" \
+    --apiserver-advertise-address="{{ ansible_eth1.ipv4.address }}"
+  when: numCPU.stdout > '1'

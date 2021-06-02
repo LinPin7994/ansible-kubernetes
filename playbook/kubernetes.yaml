@@ -1,0 +1,9 @@
+- name: Install kubernetes with kubeadm and HAproxy LB
+  hosts: kubernetes:haproxy
+  become: yes
+  vars_files:
+   - vars/main.yaml
+  roles:
+   - { role: "haproxy", when: "(groups['haproxy'] is defined and inventory_hostname in groups['haproxy'])" }
+   - { role: "kubernetes-crio-containerd", when: "inventory_hostname in lookup('inventory_hostnames', 'all:!haproxy')" }
+   #- { role: "kubernetes-docker", when: "inventory_hostname in lookup('inventory_hostnames', 'all:!haproxy')" }

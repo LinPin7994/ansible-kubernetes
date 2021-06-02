@@ -1,0 +1,54 @@
+---
+- name: Register number of cpu
+  shell: cat /proc/cpuinfo |grep CPU|wc -l
+  register: numCPU
+- name: Reset latest configurations on init master with {{ last_container_runtime }} cri
+  shell: kubeadm reset --force --cri-socket=/var/run/"{{ last_container_runtime }}"/"{{ last_container_runtime }}".sock
+  when: last_container_runtime | length > 0
+  tags: reset_init_master_with_after_first_init
+- name: Reset latest configurations on init master
+  shell: kubeadm reset --force
+  when: last_container_runtime | length == 0
+- name: Init cluster with 1 cpu
+  shell: |
+    kubeadm init --apiserver-advertise-address="{{ first_master }}" --pod-network-cidr "{{ pod_network }}" --control-plane-endpoint "{{ control_plane_endpoint }}" --cri-socket=/var/run/"{{ container_runtime }}"/"{{ container_runtime }}".sock --apiserver-cert-extra-sans k8s.andtree.ru --upload-certs --ignore-preflight-errors=NumCPU &> "{{ kubeadm_init_log_dir }}/{{ kubeadm_init_log }}" 
+  when: numCPU.stdout == '1'
+- name: Init cluster
+  shell: |
+    kubeadm init --apiserver-advertise-address="{{ first_master }}" --pod-network-cidr "{{ pod_network }}" --control-plane-endpoint "{{ control_plane_endpoint }}" --cri-socket=/var/run/"{{ container_runtime }}"/"{{ container_runtime }}".sock --apiserver-cert-extra-sans k8s.andtree.ru --upload-certs &> "{{ kubeadm_init_log_dir }}/{{ kubeadm_init_log }}"
+  when: numCPU.stdout > '1'
+- name: Post init command
+  shell: |
+   unalias cp
+   mkdir -p $HOME/.kube
+   cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
+   chown $(id -u):$(id -g) $HOME/.kube/config
+- name: Get token
+  shell: kubeadm token list |grep bootstrap|awk '{print $1}'
+  register: token
+- name: Get sha hash
+  shell: |
+     openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+  register: hash
+- name: Get certificate key ID
+  shell: |
+    cat {{ kubeadm_init_log_dir }}/{{ kubeadm_init_log }} |grep "certificate key" -A1|tail -n1
+  register: certificate
+- name: Add token, hash and certificate vars
+  add_host:
+    name:   "k8s_join"
+    token:  "{{ token.stdout }}"
+    hash:   "{{ hash.stdout }}"
+    certificate: "{{ certificate.stdout }}"
+- name: Copy flannel network template
+  template:
+    src: "flannel_network.yaml.j2"
+    dest: "{{ manifest_dir }}/flannel_network.yaml"
+- name: Apply flannel network
+  shell: kubectl apply -f "{{ manifest_dir }}/flannel_network.yaml"
+- name: Apply kubernetes dashboard
+  shell: kubectl apply -f "{{ dashboard }}"
+- name: Create service account and clusterrolebinding for kubernetes dashboard
+  shell: |
+     kubectl create serviceaccount dashboard -n default
+     kubectl create clusterrolebinding dashboard-admin -n default --clusterrole=cluster-admin --serviceaccount=default:dashboard

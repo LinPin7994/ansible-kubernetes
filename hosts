@@ -1,0 +1,17 @@
+[kubernetes:children]
+init-master
+master
+node
+ingress
+[init-master]
+192.168.0.50
+[master]
+192.168.0.51
+192.168.0.53
+[node]
+192.168.0.52
+192.168.0.54
+[ingress]
+[haproxy]
+192.168.0.60
+192.168.0.61

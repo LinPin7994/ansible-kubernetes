@@ -1,0 +1,28 @@
+global:
+  chroot: "/var/lib/haproxy"
+  maxconn: "1000"
+  user: "haproxy"
+  group: "haproxy"
+frontend:
+  name: "kube-apiserver"
+  bind: "*:6443"
+  mode: "tcp"
+backend:
+  balance: "roundrobin"
+  default_servers: 
+    - "master-1 192.168.0.50:6443"
+    - "master-2 192.168.0.51:6443"
+    - "master-3 192.168.0.53:6443"
+stats:
+  enabled: "no"
+  bind: "*:9000"
+  uri: "stats"
+  auth_user: "admin"
+  auth_password: "admin"
+
+keepalived:
+  password: "12345"
+  vip_ip: "192.168.0.70/24"
+  unicast_peer:
+    - "192.168.0.60"
+    - "192.168.0.61"

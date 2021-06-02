@@ -1,0 +1,25 @@
+---
+- name: Disable SELinux
+  selinux:
+    state: disabled
+- name: Install requirements packeges
+  yum:
+    name:
+      - haproxy
+      - psmisc
+      - keepalived
+- name: Copy HA templates
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+    - {src: "haproxy.cfg.j2", dest: "/etc/haproxy/haproxy.cfg"}
+    - {src: "keepalived.conf.j2", dest: "/etc/keepalived/keepalived.conf"}
+- name: UP haproxy and keepalived
+  systemd:
+    name: "{{ item.name }}"
+    state: restarted
+    enabled: yes
+  loop:
+   - {name: "haproxy"}
+   - {name: "keepalived"}

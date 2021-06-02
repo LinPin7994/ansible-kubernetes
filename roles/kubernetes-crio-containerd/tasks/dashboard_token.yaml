@@ -1,0 +1,7 @@
+---
+- name: Get kubernetes dashboard token
+  shell: kubectl get secret $(kubectl get serviceaccount dashboard -o jsonpath="{.secrets[0].name}") -o jsonpath="{.data.token}" | base64 --decode
+  register: dashboard_token
+- name: Show kubernetes dashboard token
+  debug: 
+    msg: "Token: {{ dashboard_token.stdout }}"

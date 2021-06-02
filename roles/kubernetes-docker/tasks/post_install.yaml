@@ -1,0 +1,12 @@
+---
+- name: Set net.bridge.bridge-nf-call-iptables = 1
+  lineinfile:
+    path: "/etc/sysctl.conf"
+    line: "net.bridge.bridge-nf-call-iptables = 1"
+    create: yes
+- name: Apply sysctl config
+  shell: sysctl -p
+- name: Fix kubelet config
+  template:
+    src: "kubelet.j2"
+    dest: "/etc/sysconfig/kubelet"

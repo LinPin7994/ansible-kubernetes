@@ -1,0 +1,57 @@
+---
+- name: Install yum-utils
+  yum:
+    name: yum-utils
+- name: Add kubernetes repo
+  copy:
+    src: "kubernetes.repo"
+    dest: "/etc/yum.repos.d/kubernetes.repo"
+- name: Add docker repository
+  shell: |
+    yum-config-manager \
+    --add-repo \
+    https://download.docker.com/linux/centos/docker-ce.repo
+  when: container_runtime == 'containerd'
+- name: Install packeges with containerd cri
+  yum:
+    name: 
+     #- docker-ce 
+     #- docker-ce-cli
+     - containerd.io
+     - kubelet
+     - kubeadm
+     - kubernetes-cni
+     - bridge-utils
+  when: container_runtime == 'containerd'
+- name: Install packeges with crio cri
+  yum:
+    name:
+     - kubelet
+     - kubeadm
+     - kubernetes-cni
+     - bridge-utils
+  when: container_runtime == 'crio'
+- name: Get cri-o repo
+  shell: |
+    curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/"{{ os_version }}"/devel:kubic:libcontainers:stable.repo
+    curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:"{{ crio_version }}".repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:"{{ crio_version }}"/"{{ os_version }}"/devel:kubic:libcontainers:stable:cri-o:"{{ crio_version }}".repo
+  when: container_runtime == 'crio'
+- name: Install cri-o
+  yum:
+    name: cri-o
+  when: container_runtime == 'crio'
+- name: Configure containerd and crio
+  lineinfile:
+    path: "{{ item.path }}"
+    line: "{{ item.line }}"
+    create: yes
+  loop:
+    - {path: "/etc/modules-load.d/containerd.conf", line: "overlay"}
+    - {path: "/etc/modules-load.d/containerd.conf", line: "br_netfilter"}
+    - {path: "/etc/modules-load.d/crio.conf", line: "overlay"}
+    - {path: "/etc/modules-load.d/crio.conf", line: "br_netfilter"}
+  when: container_runtime == 'crio' or container_runtime == 'containerd'
+- name: Add kernel module
+  shell: |
+    modprobe overlay
+    modprobe br_netfilter
