@@ -1,7 +1,7 @@
 ---
 - name: Add lable to worker node
-  #shell: kubectl label node "{{ node_hostname.stdout_lines }}" node-role.kubernetes.io/node=
   shell: nodes=$(kubectl get node|grep node|awk '{print $1}'); kubectl label node $nodes node-role.kubernetes.io/node=
+  ignore_errors: yes
 - name: Get ingress hostname
   shell: kubectl get node |grep ingress|awk '{print $1}'
   register: ingress_hostname

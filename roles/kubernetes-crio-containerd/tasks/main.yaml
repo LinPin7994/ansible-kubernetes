@@ -8,6 +8,9 @@
 - import_tasks: init_master.yaml
   when: inventory_hostname == "{{ first_master }}"
   tags: init_master
+- import_tasks: gen_dynamic_vars.yaml
+  when: inventory_hostname == "{{ first_master }}"
+  tags: gen_vars
 - import_tasks: join_master.yaml
   when: groups['master'] is defined and inventory_hostname in groups['master']
   tags: join_master
