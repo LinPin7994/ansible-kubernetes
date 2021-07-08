@@ -17,4 +17,6 @@ For add new node in cluster:
  ansible-playbook playbook/kubernetes.yaml --tags="pre_install,requirements,post_install" --limit="new_node_ip"; 
  ansible-playbook playbook/kubernetes.yaml --tags="gen_vars,join_node,labels_node"
 
+For upgrade cluster use playbook/upgrade_cluster.yaml. Playbook upgrades the nodes one at a time.
+
 Both roles testing on vagrant centos7 box.
