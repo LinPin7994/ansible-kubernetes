@@ -5,7 +5,10 @@
   vars:
     packege_version: "1.21.2-0"
     version: "1.21.2"
-    admin_config_local_path: "/path/to/admin.conf"
+    node_ip: "192.168.0.56"
+    node_type: "worker"
+    node_hostname: "worker-node-4"
+    admin_config_local_path: "/path/to/admin.conf/from_local_machine/"
     admin_config_file_remote: "/etc/kubernetes/admin.conf"
   tasks:
     - name: Upload admin.conf to nodes
@@ -13,29 +16,34 @@
         src: "{{ admin_config_local_path }}"
         dest: "{{ admin_config_file_remote }}"
     - name: Drain node
-      shell: kubectl --kubeconfig "{{ admin_config_file_remote }}" drain $(hostname) --ignore-daemonsets --delete-emptydir-data
+      shell: kubectl --kubeconfig "{{ admin_config_file_remote }}" drain "{{ node_hostname }}" --ignore-daemonsets --delete-emptydir-data
+      when: inventory_hostname == "{{ node_ip }}"
     - name: Update packeges and upgrade kubeadm
       yum:
         update_cache: yes
         name: kubeadm-{{ packege_version }}
+      when: inventory_hostname == "{{ node_ip }}"
     - name: Upgrade master node
       shell: kubeadm upgrade apply v"{{ version }}" -y
-      when: inventory_hostname in lookup('inventory_hostnames', 'all:!node:!ingress')
+      when: inventory_hostname == "{{ node_ip }}" and node_type == 'master'
     - name: Upgrade worker node
       shell: kubeadm upgrade node
-      when: inventory_hostname in lookup('inventory_hostnames', 'all:!init-master:!master')
+      when: inventory_hostname == "{{ node_ip }}" and node_type == 'worker'
     - name: Upgrade kubelet
       yum:
         name: kubelet-{{ packege_version }}
+      when: inventory_hostname == "{{ node_ip }}"
     - name: Restart kubelet
       systemd:
         name: kubelet
         state: restarted
+      when: inventory_hostname == "{{ node_ip }}"
     - name: Wait for kubelet start
       pause:
         seconds: 30
     - name: Uncordon node
-      shell: kubectl --kubeconfig "{{ admin_config_file_remote }}" uncordon $(hostname)
+      shell: kubectl --kubeconfig "{{ admin_config_file_remote }}" uncordon "{{ node_hostname }}"
+      when: inventory_hostname == "{{ node_ip }}"
     - name: Delete admin.conf from worker node
       file:
         path: "{{ admin_config_file_remote }}"
